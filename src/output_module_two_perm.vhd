@@ -1,7 +1,7 @@
 --! 
 --! Copyright (C) 2010 - 2013 Creonic GmbH
 --!
---! @file: output_module.vhd
+--! @file: output_module_two_perm.vhd
 --! @brief: output module used for ordering the output of app information into row order
 --! @author: Antonio Gutierrez
 --! @date: 2014-06-23
@@ -16,7 +16,7 @@ use work.pkg_ieee_802_11ad_matrix.all;
 use work.pkg_param.all;
 use work.pkg_types.all;
 --------------------------------------------------------
-entity output_module is
+entity output_module_two_perm is
 --generic declarations
     port (
         rst: in std_logic;
@@ -24,12 +24,15 @@ entity output_module is
         finish_iter: in std_logic;
         input: in t_hard_decision_half_codeword;
         output: out t_hard_decision_full_codeword);
-end entity output_module;
+end entity output_module_two_perm;
 --------------------------------------------------------
-architecture circuit of output_module is
+architecture circuit of output_module_two_perm is
 
     type t_output_vector is array (1 downto 0) of t_hard_decision_half_codeword;
     signal shift: t_array16;
+
+    signal input_reg_sig: t_output_vector;              -- for debugging purpose
+    
     
 begin
 
@@ -52,9 +55,11 @@ begin
             if (finish_iter = '1') then
                 if (count = 0) then
                     input_reg(0) := input;
+                    input_reg_sig(0) <= input;
                     count := count + 1;
                 else
                     input_reg(1) := input;
+                    input_reg_sig(1) <= input;
                     count := 0;
 
                     

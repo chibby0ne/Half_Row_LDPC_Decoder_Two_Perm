@@ -20,12 +20,12 @@ use work.pkg_ieee_802_11ad_param.all;
 
 
 entity check_node_block is
---generic declarations
     port (
-
         rst: in std_logic;
         clk: in std_logic;
         split: in std_logic;
+        ena_msg_ram: in std_logic;
+        ena_vc: in std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
         ena_rp: in std_logic;
         ena_ct: in std_logic;
         ena_cf: in std_logic;
@@ -35,8 +35,7 @@ entity check_node_block is
         app_in: in t_cnb_message_tc;   -- input type has to be of CFU_PAR_LEVEL because that's the number of edges that CFU handle
         
     -- outputs
-        app_out: out t_cnb_message_tc;  -- output type should be the same as input
-        check_node_parity_out: out std_logic
+        app_out: out t_cnb_message_tc  -- output type should be the same as input
 ); 
 end entity check_node_block;
 
@@ -46,6 +45,8 @@ architecture circuit of check_node_block is
     -- signals used by msg ram
     signal extrinsic_info_read: t_cn_message;
     signal extrinsic_info_write: t_cn_message;
+    signal zero: signed(BW_EXTR - 1 downto 0) := to_signed(0, BW_EXTR);
+    
     
 
     -- signals used for FIFOs
@@ -60,7 +61,6 @@ architecture circuit of check_node_block is
     signal check_node_in_reg_in: t_cn_message;     -- signal before register at input of CN
     signal check_node_in_reg_out: t_cn_message;     -- signal after register at input of CN
     signal check_node_out: t_cn_message;            -- signal output of CN
-    -- signal check_node_parity_out: std_logic; --signal output of CN (hard decision)
 
 
     -- signal used for typecasting iteration count
@@ -104,7 +104,7 @@ begin
     --------------------------------------------------------------------------------------
     msg_ram_ins: msg_ram port map (
         clk => clk,
-        we => ena_cf,
+        we => ena_msg_ram,
         wr_address => addr_msg_ram_write_reg,
         -- wr_address => addr_msg_ram_write,
         rd_address => addr_msg_ram_read_reg,
@@ -166,16 +166,22 @@ begin
                                             ena_cf => ena_cf,
                                             data_in => check_node_in_reg_out,
                                             split => split,
-                                            data_out => check_node_out,
-                                            parity_out => check_node_parity_out
+                                            data_out => check_node_out
                                         );
     
     
     --------------------------------------------------------------------------------------
     -- write new extrinsic info in message ram
     --------------------------------------------------------------------------------------
-    extrinsic_info_write <= check_node_out;
-       
+    gen_mux_input_msg_ram: for i in CFU_PAR_LEVEL - 1 downto 0 generate
+        muxes_input_ram: mux2_1_msg_ram port map (
+            input0 => zero,
+            input1 => check_node_out(i),
+            sel => ena_vc(i),
+            output => extrinsic_info_write(i)
+        );
+    end generate gen_mux_input_msg_ram;
+
 
     --------------------------------------------------------------------------------------
     -- FIFOs used to store the A priori info (Zn->m)

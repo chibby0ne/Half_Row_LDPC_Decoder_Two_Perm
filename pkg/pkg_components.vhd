@@ -25,13 +25,27 @@ package pkg_components is
     -- mux 2 to 1 used in input of app
     --------------------------------------------------------------------------------------
     component mux2_1 is
-    port (
-        input0: in t_app_messages;
-        input1: in t_app_messages;
-        sel: in std_logic;
-        output: out t_app_messages);
+        port (
+                 input0: in t_app_messages;
+                 input1: in t_app_messages;
+                 sel: in std_logic;
+                 output: out t_app_messages
+             );
     end component mux2_1;
 
+    
+    --------------------------------------------------------------------------------------
+    -- mux 2 to 1 used in input of extrinsic message
+    --------------------------------------------------------------------------------------
+
+    component mux2_1_msg_ram is
+        port (
+                 input0: in signed(BW_EXTR - 1 downto 0);
+                 input1: in signed(BW_EXTR - 1 downto 0);
+                 sel: in std_logic;
+                 output: out signed(BW_EXTR - 1 downto 0)
+             );
+    end component mux2_1_msg_ram;
 
     --------------------------------------------------------------------------------------
     -- app ram
@@ -43,7 +57,8 @@ package pkg_components is
                  wr_address: in std_logic;
                  rd_address: in std_logic;
                  data_in: in t_app_messages;
-                 data_out: out t_app_messages);
+                 data_out: out t_app_messages
+             );
     end component app_ram;
 
 
@@ -51,15 +66,15 @@ package pkg_components is
     -- mux 3 to 1 used in output of app
     --------------------------------------------------------------------------------------
     component mux3_1 is
-    port (
-        input0: in t_app_messages; 
-        input1: in t_app_messages; 
-        input2: in t_app_messages; 
-        sel: in std_logic_vector(1 downto 0);
-        output: out t_app_messages);
+        port (
+                 input0: in t_app_messages; 
+                 input1: in t_app_messages; 
+                 input2: in t_app_messages; 
+                 sel: in std_logic_vector(1 downto 0);
+                 output: out t_app_messages);
     end component mux3_1;
 
-    
+
     --------------------------------------------------------------------------------------
     -- permutation network
     --------------------------------------------------------------------------------------
@@ -68,7 +83,8 @@ package pkg_components is
         port (
             input: in t_app_messages;
             shift: in t_shift_perm_net;
-            output: out t_app_messages);
+            output: out t_app_messages
+        );
     end component permutation_network;
 
 
@@ -88,30 +104,31 @@ package pkg_components is
     -- check node block
     --------------------------------------------------------------------------------------
     component check_node_block is
-    port (
+        port (
 
-        rst: in std_logic;
-        clk: in std_logic;
-        split: in std_logic;
-        ena_rp: in std_logic;
-        ena_ct: in std_logic;
-        ena_cf: in std_logic;
-        iter: in t_iter;
-        addr_msg_ram_read: in t_msg_ram_addr;
-        addr_msg_ram_write: in t_msg_ram_addr;
-        app_in: in t_cnb_message_tc;   -- input type has to be of CFU_PAR_LEVEL because that's the number of edges that CFU handle
-        
-    -- outputs
-        app_out: out t_cnb_message_tc;  -- output type should be the same as input
-        check_node_parity_out: out std_logic
-    ); 
+                 rst: in std_logic;
+                 clk: in std_logic;
+                 split: in std_logic;
+                 ena_msg_ram: in std_logic;
+                 ena_vc: in std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
+                 ena_rp: in std_logic;
+                 ena_ct: in std_logic;
+                 ena_cf: in std_logic;
+                 iter: in t_iter;
+                 addr_msg_ram_read: in t_msg_ram_addr;
+                 addr_msg_ram_write: in t_msg_ram_addr;
+                 app_in: in t_cnb_message_tc;   -- input type has to be of CFU_PAR_LEVEL because that's the number of edges that CFU handle
+
+        -- outputs
+                 app_out: out t_cnb_message_tc  -- output type should be the same as input
+             ); 
     end component check_node_block;
 
 
     --------------------------------------------------------------------------------------
     -- check node 
     --------------------------------------------------------------------------------------
-	component check_node is
+    component check_node is
         port(
                 -- INPUTS
                 rst           : in std_logic;
@@ -121,8 +138,7 @@ package pkg_components is
                 split         : in std_logic; -- is the CN working in split mode
 
                 -- OUTPUTS
-                data_out      : out t_cn_message;
-                parity_out    : out std_logic
+                data_out      : out t_cn_message
             );
    	end component;
 
@@ -137,14 +153,15 @@ package pkg_components is
                  wr_address: in t_msg_ram_addr;
                  rd_address: in t_msg_ram_addr;
                  data_in: in t_cn_message;
-                 data_out: out t_cn_message);
+                 data_out: out t_cn_message
+             );
     end component msg_ram;
 
     
     --------------------------------------------------------------------------------------
     -- output module
     --------------------------------------------------------------------------------------
-    component output_module is
+    component output_module_two_perm is
         port (
                  rst: in std_logic;
                  clk: in std_logic;
@@ -152,7 +169,7 @@ package pkg_components is
                  input: in t_hard_decision_half_codeword;
                  output: out t_hard_decision_full_codeword
              );
-    end component output_module;
+    end component output_module_two_perm;
 
     --------------------------------------------------------------------------------------
     -- controller
@@ -166,7 +183,8 @@ package pkg_components is
              parity_out: in t_parity_out_contr;
 
         -- outputs
-             ena_vc: out std_logic;
+             ena_msg_ram: out std_logic;
+             ena_vc: out std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
              ena_rp: out std_logic;
              ena_ct: out std_logic;
              ena_cf: out std_logic;
@@ -179,9 +197,9 @@ package pkg_components is
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
              shift_inv: out t_shift_contr;
-             mux_input_halves: out std_logic;           -- mux choosing input codeword halves
-             mux_input_app: out std_logic;        -- mux at input of app rams used for storing (0 = CNB, 1 = new code)
-             mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
+             sel_mux_input_halves: out std_logic;
+             sel_mux_input_app: out std_logic;
+             sel_mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
     end component controller;
     
