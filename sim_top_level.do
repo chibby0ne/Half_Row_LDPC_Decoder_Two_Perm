@@ -35,8 +35,10 @@ add wave -unsigned sim:/dut/msg_rd_addr
 add wave -unsigned sim:/dut/msg_wr_addr
 
 
-add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/zetas
+add wave -unsigned sim:/dut/gen_cnbs(0)/cnbs_ins/addr_msg_ram_read_reg
+add wave -unsigned sim:/dut/gen_cnbs(0)/cnbs_ins/addr_msg_ram_write_reg
 add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/app_in_reg
+add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/zetas
 add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/extrinsic_info_read
 add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/check_node_out
 add wave -signed sim:/dut/gen_cnbs(0)/cnbs_ins/extrinsic_info_write

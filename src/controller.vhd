@@ -309,10 +309,7 @@ begin
                     if (msg_row_rd = matrix_rows * 2) then
                         msg_row_rd := 0;
                     end if;
-                    if (msg_row_wr = matrix_rows * 2) then
-                        msg_row_wr := 0;
-                    end if;
-
+                    
 
                     -- 
                     -- parity checks (1st half)
@@ -341,6 +338,7 @@ begin
                             end if;
                         end if;
                     end loop;
+
 
 
                 end if;
@@ -388,6 +386,9 @@ begin
                 msg_rd_addr <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
                 msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
 
+                if (first_time = false) then
+                    msg_row_wr := msg_row_wr + 1;
+                end if;
                 msg_row_rd := msg_row_rd + 1;
 
 
@@ -560,7 +561,6 @@ begin
                 --
                 iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
                 msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
-                msg_row_wr := msg_row_wr + 1;
 
 
                 -- finish_iter
@@ -648,6 +648,10 @@ begin
 
 
 
+                -- reset if reached end
+                if (msg_row_wr = matrix_rows * 2) then
+                    msg_row_wr := 0;
+                end if;
 
                 --
                 -- inside CNB

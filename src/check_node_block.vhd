@@ -93,7 +93,7 @@ begin
                 app_in_reg <= app_in;
                 iter_int_reg <= iter_int;
                 addr_msg_ram_read_reg <= addr_msg_ram_read;
-                addr_msg_ram_write_reg <= addr_msg_ram_write;
+                -- addr_msg_ram_write_reg <= addr_msg_ram_write;
             end if;
         end if;
     end process;
@@ -105,8 +105,8 @@ begin
     msg_ram_ins: msg_ram port map (
         clk => clk,
         we => ena_msg_ram,
-        wr_address => addr_msg_ram_write_reg,
-        -- wr_address => addr_msg_ram_write,
+        -- wr_address => addr_msg_ram_write_reg,
+        wr_address => addr_msg_ram_write,
         rd_address => addr_msg_ram_read_reg,
         data_in => extrinsic_info_write,
         data_out => extrinsic_info_read
