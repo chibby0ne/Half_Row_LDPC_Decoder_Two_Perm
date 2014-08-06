@@ -188,6 +188,7 @@ package pkg_components is
              ena_rp: out std_logic;
              ena_ct: out std_logic;
              ena_cf: out std_logic;
+             new_codeword: out std_logic;
              valid_output: out std_logic;
              finish_iter: out std_logic;
              iter: out t_iter;

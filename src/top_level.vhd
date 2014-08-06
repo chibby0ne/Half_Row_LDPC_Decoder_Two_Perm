@@ -25,6 +25,7 @@ entity top_level is
         input: in t_app_message_full_codeword;
 
         -- outputs
+        new_codeword: out std_logic;
         valid_output: out std_logic;
         output: out t_hard_decision_full_codeword);
 end entity top_level;
@@ -69,6 +70,7 @@ architecture circuit of top_level is
     
     -- singals used by controller
     signal parity_out: t_parity_out_contr;
+    signal parity_out_reg: t_parity_out_contr;
     signal ena_msg_ram: std_logic; 
     signal ena_vc: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);               
     signal ena_rp: std_logic;
@@ -197,6 +199,15 @@ begin
         end generate gen_parity_out_detail;
     end generate gen_parity_out;
     
+    -- register parity_out to avoid glitches, and input that to the controller
+    process (rst, clk)
+    begin
+        if (rst = '1') then
+            parity_out_reg <= (others => (others => '0'));
+        elsif (clk'event and clk = '1') then
+            parity_out_reg <= parity_out;
+        end if;
+    end process;
 
     --------------------------------------------------------------------------------------
     -- cnbs intantiations
@@ -271,7 +282,7 @@ begin
              clk => clk,
              rst => rst,
              code_rate => code_rate,
-             parity_out => parity_out,
+             parity_out => parity_out_reg,
 
              -- outputs
              ena_msg_ram => ena_msg_ram,
@@ -279,6 +290,7 @@ begin
              ena_rp => ena_rp,
              ena_ct => ena_ct,
              ena_cf => ena_cf,
+             new_codeword => new_codeword,
              valid_output => valid_output,
              finish_iter => finish_iter,
              iter => iter,

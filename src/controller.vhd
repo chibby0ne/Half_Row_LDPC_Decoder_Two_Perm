@@ -33,6 +33,7 @@ entity controller is
              ena_rp: out std_logic;
              ena_ct: out std_logic;
              ena_cf: out std_logic;
+             new_codeword: out std_logic;
              valid_output: out std_logic;
              finish_iter: out std_logic;
              iter: out t_iter;
@@ -68,6 +69,9 @@ architecture circuit of controller is
     signal matrix_rows: natural range 0 to 8:= 1;
     signal matrix_max_check_degree: natural range 0 to 16;
 
+    signal parity_out_reg: t_parity_out_contr;
+    
+
     -- iterating signal
 
     -- signals used for debugging (assigned by variables)
@@ -75,7 +79,8 @@ architecture circuit of controller is
     signal cng_counter_sig: natural := 0;
     signal vector_addr_sig: natural := 0;
     signal start_pos_next_half_sig: natural := 0;
-    signal ok_checks_sig: integer := 0;
+    signal ok_checks_sig: natural := 0;
+    signal pchecks_sig: std_logic_vector(SUBMAT_SIZE - 1 downto 0) := (others => '0');
     
     
 begin
@@ -112,7 +117,19 @@ begin
 
     matrix_max_check_degree <= matrix_length / matrix_rows;
 
-
+    
+    -- --------------------------------------------------------------------------------------
+    -- -- registering parity_out (to avoid glitches)
+    -- --------------------------------------------------------------------------------------
+    -- process (clk, rst)
+    -- begin
+    --     if (rst = '1') then
+    --         parity_out_reg <= (others => (others => '0'));
+    --     elsif (clk'event and clk = '1') then
+    --         parity_out_reg <= parity_out;
+    --     end if;
+    -- end process;
+    --
     --------------------------------------------------------------------------------------
     -- Lower section of FSM: sequential part
     -- Here the state transitions is done
@@ -207,6 +224,7 @@ begin
                 sel_mux_input_halves <= '0';
                 sel_mux_input_app <= '0';
 
+                parity_out_reg <= (others => (others => '0'));
 
                 --
                 -- max_app_val or real app val + real shift 
@@ -228,8 +246,11 @@ begin
 
                 iter_int := 0;
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
-                finish_iter <= '0';
                 next_iter_last_iter := false;
+                finish_iter <= '0';
+
+                -- getting new codeword?
+                new_codeword <= '0';
 
                 --
                 -- resetting valid output
@@ -311,16 +332,7 @@ begin
                     end if;
                     
 
-                    -- 
-                    -- parity checks (1st half)
-                    --
-                    for i in 0 to SUBMAT_SIZE - 1 loop                      -- for each CNB
-                        pchecks(i) := parity_out(i)(0);                     -- bit if edge 0, for cnb i
-                        for j in 1 to CFU_PAR_LEVEL - 1 loop                -- xor all the edges (j) in each cnb (i)
-                            pchecks(i) := pchecks(i) xor parity_out(i)(j);  
-                        end loop;
-                    end loop;
-
+                    
                     --
                     -- inverse shifting
                     --
@@ -400,6 +412,7 @@ begin
                 cng_counter_sig <= cng_counter;
                 vector_addr_sig <= vector_addr;
                 start_pos_next_half_sig <= start_pos_next_half;
+                ok_checks_sig <= ok_checks;
 
 
                 --
@@ -410,6 +423,7 @@ begin
                         valid_output <= '1';
                     end if;
                     finish_iter <= '1';
+                    new_codeword <= '1';
                     nx_state <= FINISH;
                 else
                     nx_state <= SECOND;
@@ -448,32 +462,18 @@ begin
                     app_rd_addr <= '1';
 
                     
-                    -- 
-                    -- parity checks (2st half)
-                    --
-                    for i in 0 to SUBMAT_SIZE - 1 loop
-                        pchecks(i) := pchecks(i) xor parity_out(i)(0);
-                        for j in 1 to CFU_PAR_LEVEL - 1 loop
-                            pchecks(i) := pchecks(i) xor parity_out(i)(j);
-                        end loop;
-                    end loop;
-
-                    for i in 0 to SUBMAT_SIZE - 1 loop
-                        if (pchecks(i) = '0') then
-                            val := 1;
-                        else
-                            val := 0;
-                        end if;
-                        ok_checks := ok_checks + val;
-                    end loop;
-
-                    -- if all parity checks are satisfied do one more whole iteration (EARLY TERMINATION)
-                    if (ok_checks = matrix_rows * SUBMAT_SIZE) then
-                        next_iter_last_iter := true;
-                    end if;
-
-
                 end if;
+
+
+                -- 
+                -- parity checks (1st half)
+                --
+                for i in 0 to SUBMAT_SIZE - 1 loop                      -- for each CNB
+                    pchecks(i) := parity_out(i)(0);                     -- bit if edge 0, for cnb i
+                    for j in 1 to CFU_PAR_LEVEL - 1 loop                -- xor all the edges (j) in each cnb (i)
+                        pchecks(i) := pchecks(i) xor parity_out(i)(j);  
+                    end loop;
+                end loop;
 
 
                 --
@@ -518,6 +518,8 @@ begin
                 cng_counter_sig <= cng_counter;
                 vector_addr_sig <= vector_addr;
                 start_pos_next_half_sig <= start_pos_next_half;
+                ok_checks_sig <= ok_checks;
+                pchecks_sig <= pchecks;
 
 
                 --
@@ -548,14 +550,40 @@ begin
                 --
                 -- nothing to do
                 sel_mux_input_app <= '0';
-                
+
+
+                -- 
+                -- parity checks (2st half)
+                --
+                for i in 0 to SUBMAT_SIZE - 1 loop
+                    pchecks(i) := pchecks(i) xor parity_out(i)(0);
+                    for j in 1 to CFU_PAR_LEVEL - 1 loop
+                        pchecks(i) := pchecks(i) xor parity_out(i)(j);
+                    end loop;
+                end loop;
+
+                for i in 0 to SUBMAT_SIZE - 1 loop
+                    if (pchecks(i) = '0') then
+                        val := 1;
+                    else
+                        val := 0;
+                    end if;
+                    ok_checks := ok_checks + val;
+                end loop;
+
+
+                -- if all parity checks are satisfied do one more whole iteration (EARLY TERMINATION)
+                if (ok_checks = matrix_rows * SUBMAT_SIZE) then
+                    next_iter_last_iter := true;
+                end if;
+
 
                 --
                 -- max_app_val or real app val + real shift 
                 --
                 -- no shifting done because there's no data needed
 
-                
+
                 --
                 -- inside CNB
                 --
@@ -573,6 +601,8 @@ begin
                 cng_counter_sig <= cng_counter;
                 vector_addr_sig <= vector_addr;
                 start_pos_next_half_sig <= start_pos_next_half;
+                ok_checks_sig <= ok_checks;
+                pchecks_sig <= pchecks;
 
 
                 --
@@ -582,7 +612,7 @@ begin
 
 
 
-                
+
             --------------------------------------------------------------------------------------
             -- fourth state (just CF)
             --------------------------------------------------------------------------------------
@@ -604,13 +634,13 @@ begin
 
                 sel_mux_input_app <= '0';
 
-                
+
 
                 --
                 -- APP RAM
                 --
                 app_wr_addr <= '0';
-                
+
                 -- increment row in addr matrix. check if we have reached the last row of the addr matrix and if true then reset it to the first row
                 if (first_time = false) then
                     cng_counter_inv := cng_counter_inv + 1;
@@ -706,6 +736,7 @@ begin
 
                 -- signal for output module
                 finish_iter <= '1';
+                new_codeword <= '0';
 
                 -- next state 
                 nx_state <= START_RESET;

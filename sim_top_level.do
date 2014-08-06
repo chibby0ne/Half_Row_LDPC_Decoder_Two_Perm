@@ -52,7 +52,12 @@ add wave -unsigned sim:/dut/ena_cf
 add wave -unsigned sim:/dut/iter
 
 add wave -unsigned sim:/valid_output_tb
+add wave -unsigned sim:/new_codeword_tb
+add wave -unsigned sim:/dut/controller_ins/ok_checks_sig
+add wave -unsigned sim:/dut/controller_ins/pchecks_sig
+add wave -unsigned sim:/dut/controller_ins/cng_counter_sig
 add wave -unsigned sim:/dut/parity_out
+add wave -unsigned sim:/dut/parity_out_reg
 
 add wave -unsigned sim:/dut/finish_iter
 add wave -unsigned sim:/dut/output_in
