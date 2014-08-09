@@ -14,6 +14,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.pkg_support.all;
 use work.pkg_types.all;
+use work.pkg_param.all;
 use work.pkg_components.all;
 --------------------------------------------------------
 entity top_level_wrapper is
