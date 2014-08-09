@@ -44,9 +44,9 @@ begin
     --------------------------------------------------------------------------------------
 
     -- code_rate
-    code_rate_map <= R050 when code_rate = '00' else 
-                     R062 when code_rate = '01' else
-                     R075 when code_rate = '11' else 
+    code_rate_map <= R050 when code_rate = "00" else 
+                     R062 when code_rate = "01" else
+                     R075 when code_rate = "11" else 
                      R081;
 
 

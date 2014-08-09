@@ -198,7 +198,7 @@ begin
             parity_out(i)(j) <= cnb_input(i)(j)(BW_APP - 1);
         end generate gen_parity_out_detail;
     end generate gen_parity_out;
-    
+
     -- register parity_out to avoid glitches, and input that to the controller
     process (rst, clk)
     begin
@@ -208,6 +208,7 @@ begin
             parity_out_reg <= parity_out;
         end if;
     end process;
+
 
     --------------------------------------------------------------------------------------
     -- cnbs intantiations
