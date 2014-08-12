@@ -55,8 +55,8 @@ architecture circuit of controller is
     type state is (START_RESET, FIRST, SECOND, THIRD, FOURTH, FINISH);
     signal pr_state: state;
     signal nx_state: state;
-    attribute enum_encoding: string;
-    attribute enum_encoding of state: type is "sequential";
+    -- attribute enum_encoding: string;
+    -- attribute enum_encoding of state: type is "sequential";
 
     signal addr_length: std_logic := '0';
 
