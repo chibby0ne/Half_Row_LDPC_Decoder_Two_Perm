@@ -19,7 +19,7 @@ use work.pkg_components.all;
 use work.pkg_param.all;
 --------------------------------------------------------
 entity top_level_tb is
-    generic (PERIOD: time := 40 ns;
+    generic (CLK_PERIOD     : time    := 3.0030000 ns;
             PD: time := 3 ns);
 end entity top_level_tb;
 --------------------------------------------------------
@@ -77,10 +77,10 @@ architecture circuit of top_level_tb is
     signal output_tb: std_logic_vector(MAX_CHV - 1 downto 0);
 
 
-    -- file fin: text open read_mode is "input_decoder_oneword.txt";
-    -- file fout: text open read_mode is "output_decoder_oneword_column.txt";
-    file fin: text open read_mode is "input_decoder_high_SNR_oneword.txt";
-    file fout: text open read_mode is "output_decoder_high_SNR_oneword.txt";
+    file fin: text open read_mode is "input_decoder_oneword.txt";
+    file fout: text open read_mode is "output_decoder_oneword_column.txt";
+    -- file fin: text open \read_mode is "input_decode\r_high_SNR_onewo\rd.txt";
+    -- file fout: text open \read_mode is "output_decode\r_high_SNR_onewo\rd.txt";
     signal cnb_input_sig: t_cnb_message_tc_top_level;
 
 

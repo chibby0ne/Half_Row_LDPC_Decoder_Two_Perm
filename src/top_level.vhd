@@ -88,7 +88,6 @@ architecture circuit of top_level is
     signal sel_mux_input_app: std_logic;        
     signal sel_mux_output_app: t_mux_out_app;   -- selects which value to use as CNB input: dummy, from inputs, or from app
 
-    signal split: std_logic := '0';
 
 
 
@@ -217,7 +216,6 @@ begin
         cnbs_ins: check_node_block port map (
         rst => rst,
         clk => clk,
-        split => split,
         ena_msg_ram => ena_msg_ram,
         ena_vc => ena_vc,
         ena_rp => ena_rp,
