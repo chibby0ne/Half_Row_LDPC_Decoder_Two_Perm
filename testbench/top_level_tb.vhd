@@ -19,7 +19,7 @@ use work.pkg_components.all;
 use work.pkg_param.all;
 --------------------------------------------------------
 entity top_level_tb is
-    generic (CLK_PERIOD     : time    := 3.0030000 ns;
+    generic (PERIOD: time := 40 ns;
             PD: time := 3 ns);
 end entity top_level_tb;
 --------------------------------------------------------
