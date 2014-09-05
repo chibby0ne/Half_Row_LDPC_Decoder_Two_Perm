@@ -248,6 +248,7 @@ begin
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
                 next_iter_last_iter := false;
                 finish_iter <= '0';
+                monitor_finish_iter <= '0';
 
                 -- getting new codeword?
                 new_codeword <= '0';
@@ -324,6 +325,8 @@ begin
                         ok_checks := 0;
 
                         finish_iter <= '1';
+                        monitor_finish_iter <= '1';
+
                     end if;
 
                     -- message ram addresses
@@ -418,11 +421,12 @@ begin
                 --
                 -- next state
                 --
-                if (iter_int = MAX_ITER - 1 or next_iter_last_iter = true) then
+                if (iter_int = MAX_ITER or next_iter_last_iter = true) then
                     if (next_iter_last_iter = true) then
                         valid_output <= '1';
                     end if;
                     finish_iter <= '1';
+                    monitor_finish_iter <= '1';
                     new_codeword <= '1';
                     nx_state <= FINISH;
                 else
@@ -593,6 +597,7 @@ begin
 
                 -- finish_iter
                 finish_iter <= '0';
+                monitor_finish_iter <= '0';
 
                 --
                 -- signals for debugging
@@ -736,6 +741,7 @@ begin
 
                 -- signal for output module
                 finish_iter <= '1';
+                monitor_finish_iter <= '1';
                 new_codeword <= '0';
 
                 -- next state 
