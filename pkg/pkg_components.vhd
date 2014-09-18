@@ -196,7 +196,7 @@ package pkg_components is
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
              shift_inv: out t_shift_contr;
-             sel_mux_input_halves: out std_logic;
+             -- sel_mux_input_halves: out std_logic;
              sel_mux_input_app: out std_logic;
              sel_mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
@@ -211,7 +211,7 @@ package pkg_components is
                  clk: in std_logic;
                  rst: in std_logic;
                  code_rate: in t_code_rate;
-                 input: in t_app_message_full_codeword; 
+                 input: in t_app_message_half_codeword; 
 
         -- outputs
                  new_codeword: out std_logic;

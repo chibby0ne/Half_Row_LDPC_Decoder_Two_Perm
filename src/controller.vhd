@@ -43,7 +43,7 @@ entity controller is
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
              shift_inv: out t_shift_contr;
-             sel_mux_input_halves: out std_logic;           -- mux choosing input codeword halves
+             -- sel_mux_input_halves: out std_logic;           -- mux choosing input codeword halves
              sel_mux_input_app: out std_logic;
              sel_mux_output_app: out t_mux_out_app          -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
@@ -52,7 +52,7 @@ end entity controller;
 architecture circuit of controller is
 
     -- signals used in FSM
-    type state is (START_RESET, FIRST, SECOND, THIRD, FOURTH, FINISH);
+    type state is (START_RESET, MATRIX_CALC, FIRST, SECOND, THIRD, FOURTH, FINISH);
     signal pr_state: state;
     signal nx_state: state;
     -- attribute enum_encoding: string;
@@ -88,34 +88,17 @@ begin
     --------------------------------------------------------------------------------------
     -- selection of matrices depending on the code rate 
     --------------------------------------------------------------------------------------
-
-    gen_matrix_addr: for i in 0 to 63 generate
-        matrix_addr(i) <= IEEE_802_11AD_P42_N672_R050_ADDR(i) when code_rate = R050 else 
-                          IEEE_802_11AD_P42_N672_R062_ADDR(i) when i < 60 else -1 when code_rate = R062 else
-                          IEEE_802_11AD_P42_N672_R075_ADDR(i) when i < 60 else -1 when code_rate = R075 else
-                          IEEE_802_11AD_P42_N672_R081_ADDR(i) when i < 48 else -1 when code_rate = R081;
-    end generate gen_matrix_addr;
-
-
-    -- changed to use offset matrix instead of original shift because of one permutation network
-    gen_matrix_shift: for i in 0 to 63 generate
-        matrix_shift(i) <= IEEE_802_11AD_P42_N672_R050_SHIFT(i) when code_rate = R050 else 
-                           IEEE_802_11AD_P42_N672_R062_SHIFT(i) when i < 60 else -1 when code_rate = R062 else
-                           IEEE_802_11AD_P42_N672_R075_SHIFT(i) when i < 60 else -1 when code_rate = R075 else
-                           IEEE_802_11AD_P42_N672_R081_SHIFT(i) when i < 48 else -1 when code_rate = R081;
-    end generate gen_matrix_shift;
-
-    matrix_length <= IEEE_802_11AD_P42_N672_R050_ADDR'length when code_rate = R050 else
-                     IEEE_802_11AD_P42_N672_R062_ADDR'length when code_rate = R062 else
-                     IEEE_802_11AD_P42_N672_R075_ADDR'length when code_rate = R075 else
-                     IEEE_802_11AD_P42_N672_R081_ADDR'length;
-
+    
     matrix_rows <= R050_ROWS when code_rate = R050 else
                    R062_ROWS when code_rate = R062 else
                    R075_ROWS when code_rate = R075 else
                    R081_ROWS;
 
-    matrix_max_check_degree <= matrix_length / matrix_rows;
+    -- matrix_max_check_degree <= matrix_length / matrix_rows;
+    matrix_max_check_degree <= MAX_CHECK_DEGREE_R050 when code_rate = R050 else
+                               MAX_CHECK_DEGREE_R062 when code_rate = R062 else
+                               MAX_CHECK_DEGREE_R075 when code_rate = R075 else
+                               MAX_CHECK_DEGREE_R081;
 
     
     -- --------------------------------------------------------------------------------------
@@ -169,7 +152,7 @@ begin
         variable msg_row_wr: integer range 0 to 16 := 0;
 
         -- parity checks
-        variable ok_checks: integer range 0 to 672/2:= 0;
+        variable ok_checks: integer range 0 to MAX_CHV / 2:= 0;
         variable pchecks: std_logic_vector(SUBMAT_SIZE - 1 downto 0) := (others => '0');
 
         -- start pos
@@ -185,12 +168,13 @@ begin
 
         -- start iterating
         variable first_time: boolean := true;
+        variable first_matrix_calc: boolean := true;
+
         -- aux variables
         variable val: integer range 0 to 1 := 0;
 
         variable ena_vc_first: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0) := (others => '0');
         variable ena_vc_second: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0) := (others => '0');
-        
         
         
     begin
@@ -221,7 +205,7 @@ begin
                 --
                 app_rd_addr <= '0';
                 app_wr_addr <= '0';
-                sel_mux_input_halves <= '0';
+                -- sel_mux_input_halves <= '0';
                 sel_mux_input_app <= '0';
 
                 parity_out_reg <= (others => (others => '0'));
@@ -263,7 +247,57 @@ begin
                 --
                 -- next state
                 --
+                if (first_matrix_calc = true) then
+                    nx_state <= MATRIX_CALC;
+                else
+                    nx_state <= FIRST;
+                end if;
+
+
+                
+            --------------------------------------------------------------------------------------
+            -- second state (calculate matrix)
+            --------------------------------------------------------------------------------------
+            when MATRIX_CALC =>
+
+                --
+                -- calculate matrix values
+                --
+                for i in 0 to 63 loop
+                    if (code_rate = R050) then
+                        matrix_addr(i) <= IEEE_802_11AD_P42_N672_R050_ADDR(i);
+                        matrix_shift(i) <= IEEE_802_11AD_P42_N672_R050_SHIFT(i);
+                    elsif (code_rate = R062) then
+                        if (i < 60) then
+                            matrix_addr(i) <= IEEE_802_11AD_P42_N672_R062_ADDR(i);
+                            matrix_shift(i) <= IEEE_802_11AD_P42_N672_R062_SHIFT(i);
+                        else
+                            matrix_addr(i) <= -1;
+                            matrix_shift(i) <= -1;
+                        end if;
+                    elsif (code_rate = R075) then
+                        if (i < 60) then
+                            matrix_addr(i) <= IEEE_802_11AD_P42_N672_R075_ADDR(i);
+                            matrix_shift(i) <= IEEE_802_11AD_P42_N672_R075_SHIFT(i);
+                        else
+                            matrix_addr(i) <= -1;
+                            matrix_shift(i) <= -1;
+                        end if;
+                    else 
+                        if (i < 48) then
+                            matrix_addr(i) <= IEEE_802_11AD_P42_N672_R081_ADDR(i);
+                            matrix_shift(i) <= IEEE_802_11AD_P42_N672_R081_SHIFT(i);
+                        else
+                            matrix_addr(i) <= -1;
+                            matrix_shift(i) <= -1;
+                        end if;
+                    end if;
+                end loop;
+
+                first_matrix_calc := false;
+
                 nx_state <= FIRST;
+
 
 
             --------------------------------------------------------------------------------------
@@ -284,7 +318,7 @@ begin
 
                     ena_msg_ram <= '0';
                     ena_vc <= (others => '1');                             -- ENA_VC for the the first time it is in this state (writing to APP)
-                    sel_mux_input_halves <= '0';                            -- start with MS half
+                    -- sel_mux_input_halves <= '0';                            -- start with MS half
                     sel_mux_input_app <= '1';                               -- store in APP from input
 
                     app_wr_addr <= '0';                                     -- store in APP in first half
@@ -299,6 +333,7 @@ begin
                     msg_row_rd := 0;
                     msg_row_wr := 0;
 
+                    new_codeword <= '1';
                 else
 
                     ena_msg_ram <= '1';
@@ -427,7 +462,7 @@ begin
                     end if;
                     finish_iter <= '1';
                     monitor_finish_iter <= '1';
-                    new_codeword <= '1';
+                    new_codeword <= '0';
                     nx_state <= FINISH;
                 else
                     nx_state <= SECOND;
@@ -454,12 +489,15 @@ begin
                 -- APP RAM  or NEW_CODEWORD
                 --
                 if (first_time = true) then
-                    sel_mux_input_halves <= '1';                -- get codeword from input second half 
+                    -- sel_mux_input_halves <= '1';                -- get codeword from input second half 
 
                     ena_vc <= (others => '1');                  -- store second half in APP
                     sel_mux_input_app <= '1';                   -- store in APP from input second half
 
                     app_wr_addr <= '1';                         -- store in address 1 of APP
+
+                    new_codeword <= '0';
+
                 else
                     sel_mux_input_app <= '0';
                     ena_vc <= (others => '0');                  -- using APP values
@@ -502,6 +540,10 @@ begin
                             sel_mux_output_app(j) <= std_logic_vector(to_unsigned(1, sel_mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));      
                         end if;
+                    else
+                        ena_vc_second(j) := '0';
+                        sel_mux_output_app(j) <= std_logic_vector(to_unsigned(1, sel_mux_output_app(0)'length));            
+                        shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));      
                     end if;
                 end loop;
 

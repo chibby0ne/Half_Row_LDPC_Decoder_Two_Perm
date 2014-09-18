@@ -25,7 +25,7 @@ end entity tb_top_level;
 --------------------------------------------------------
 architecture circuit of tb_top_level is
 
-    
+
     --------------------------------------------------------------------------------------
     -- component declaration
     --------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ architecture circuit of tb_top_level is
                  clk: in std_logic;
                  rst: in std_logic;
                  code_rate: in t_code_rate;
-                 input: in t_app_message_full_codeword;
+                 input: in t_app_message_half_codeword;
 
         -- outputs
                  new_codeword: out std_logic;
@@ -44,38 +44,32 @@ architecture circuit of tb_top_level is
     end component top_level;
 
 
+
     --------------------------------------------------------------------------------------
     -- signal declaration 
     --------------------------------------------------------------------------------------
     signal clk_tb: std_logic := '0';
     signal rst_tb: std_logic := '0';
     signal code_rate_tb: t_code_rate;
-    signal input_tb: t_app_message_full_codeword;
+    signal input_tb: t_app_message_half_codeword;
     signal new_codeword_tb: std_logic := '0';
     signal valid_output_tb: std_logic := '0';
     signal output_tb: t_hard_decision_full_codeword;
-
 
     -- file fin: text open read_mode is "input_decoder_oneword.txt";
     -- file fout: text open read_mode is "output_decoder_oneword_column.txt";
     -- file fin: text open read_mode is "input_decoder_high_SNR_oneword.txt";
     -- file fout: text open read_mode is "output_decoder_high_SNR_oneword.txt";
 
-    file fin: text open read_mode is "input_decoder_allsnr_r050_cols.txt";
-    file fout: text open read_mode is "output_decoder_allsnr_r050_cols.txt";
-    signal init: std_logic;
-
-    
-
-
-
+    file fin: text open read_mode is "input_files/input_decoder_allsnr_r050_cols.txt";
+    file fout: text open read_mode is "output_files/output_decoder_allsnr_r050_cols.txt";
 
 begin
 
     --------------------------------------------------------------------------------------
     -- component instantiation
     --------------------------------------------------------------------------------------
-    dut: top_level_wrapper port map (
+    dut: top_level port map (
                                 -- inputs
                                 clk => clk_tb,
                                 rst => rst_tb,
@@ -98,67 +92,33 @@ begin
 
 
     -- rst
-    rst_tb <= '0';
+    rst_tb <= '1', '0' after CLK_PERIOD;
 
 
     -- code rate
     code_rate_tb <= R050;           -- R050
 
-    -- used to load the first codeword
-    init <= '1', '0' after CLK_PERIOD;
-
-    -- input
-    -- process
-    --     variable l: line;
-    --     variable val: integer;
-    --     variable val_signed: signed(BW_APP - 1 downto 0);
-    --
-    -- begin
-    --     if (not endfile(fin)) then
-    --         for i in 0 to 2 * CFU_PAR_LEVEL - 1 loop
-    --             for j in 0 to SUBMAT_SIZE - 1 loop
-    --                 readline(fin, l);
-    --                 read(l, val);
-    --                 val_signed := to_signed(val, BW_APP);
-    --                 for k in 0 to BW_APP - 1 loop
-    --                     input_tb(i * SUBMAT_SIZE * BW_APP + j * BW_APP + k) <= val_signed(k);
-    --                 end loop;
-    --             -- input_tb(i)(j) <= to_signed(val, BW_APP);    -- uncomment this and comment loop when testing top_level directly (not top_level_wrapper)
-    --             end loop;
-    --         end loop;
-    --         wait for 360 * CLK_PERIOD;
-    --     else
-    --         assert false
-    --         report "end of inputs"
-    --         severity failure;
-
-    --     end if;
-    -- end process;
-    --
 
     -- input 
-    process (new_codeword_tb, init)
+    process (new_codeword_tb, clk_tb, rst_tb)
         variable l: line;
         variable val: integer;
         variable val_signed: signed(BW_APP - 1 downto 0);
     begin
-        if ((init'event and init = '1') or (new_codeword_tb'event and new_codeword_tb = '1')) then
+        if (((new_codeword_tb'event and new_codeword_tb = '1') or (clk_tb'event and clk_tb = '1' and new_codeword_tb = '1')) and (rst_tb = '0')) then
             if (not endfile(fin)) then
-                for i in 0 to 2 * CFU_PAR_LEVEL - 1 loop
+                for i in 0 to CFU_PAR_LEVEL - 1 loop
                     for j in 0 to SUBMAT_SIZE - 1 loop
                         readline(fin, l);
                         read(l, val);
                         val_signed := to_signed(val, BW_APP);
-                        -- for k in 0 to BW_APP - 1 loop
-                        --     input_tb(i * SUBMAT_SIZE * BW_APP + j * BW_APP + k) <= val_signed(k);
-                        -- end loop;
                         input_tb(i)(j) <= to_signed(val, BW_APP);    -- uncomment this and comment loop when testing top_level directly (not top_level_wrapper)
                     end loop;
                 end loop;
             else
                 assert false
                 report "end of inputs"
-                severity failure;
+                severity note;
             end if;
         end if;
     end process;
@@ -167,34 +127,6 @@ begin
     -- output comparison
     --------------------------------------------------------------------------------------
 
-    -- process
-    --     variable l: line;
-    --     variable val: integer := 0;
-
-
-    -- begin
-    --         wait for PD;
-    --         if (not endfile(fout)) then
-    --             wait for CLK_PERIOD * 35;
-    --             for i in 0 to 2 * CFU_PAR_LEVEL - 1 loop
-    --                 for j in 0 to SUBMAT_SIZE - 1 loop
-    --                     readline(fout, l);
-    --                     read(l, val);
-    --                     -- assert to_integer(unsigned'("" & output_tb(i)(j))) = val                          -- uncomment this and next line and comment the two lines below when testing top_level directly
-    --                     -- report "output(" & integer'image(i) & ")(" & integer'image(j) & ") should be = " & integer'image(val) & " but is = " & integer'image(to_integer(unsigned'("" & output_tb(i)(j))))
-    --                     assert to_integer(unsigned'("" & output_tb(i * SUBMAT_SIZE + j))) = val 
-    --                     report "output(" & integer'image(i * SUBMAT_SIZE + j) & ") should be = " & integer'image(val) & " but is = " & integer'image(to_integer(unsigned'("" & output_tb(i * SUBMAT_SIZE + j))))
-    --                     severity failure;
-    --                 end loop;
-    --             end loop;
-    --         else
-    --             assert false
-    --             report "no errors"
-    --             severity failure;
-    --         end if;
-    -- end process;
-
-    ----
     process (monitor_finish_iter)
         variable l: line;
         variable val: integer := 0;
@@ -209,8 +141,6 @@ begin
                         read(l, val);
                         assert to_integer(unsigned'("" & output_tb(i)(j))) = val                          -- uncomment this and next line and comment the two lines below when testing top_level directly
                         report "output(" & integer'image(i) & ")(" & integer'image(j) & ") should be = " & integer'image(val) & " but is = " & integer'image(to_integer(unsigned'("" & output_tb(i)(j))))
-                        -- assert to_integer(unsigned'("" & output_tb(i * SUBMAT_SIZE + j))) = val 
-                        -- report "output(" & integer'image(i * SUBMAT_SIZE + j) & ") should be = " & integer'image(val) & " but is = " & integer'image(to_integer(unsigned'("" & output_tb(i * SUBMAT_SIZE + j))))
                         severity failure;
                     end loop;
                 end loop;
