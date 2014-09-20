@@ -168,7 +168,6 @@ begin
 
         -- start iterating
         variable first_time: boolean := true;
-        variable first_matrix_calc: boolean := true;
 
         -- aux variables
         variable val: integer range 0 to 1 := 0;
@@ -210,14 +209,28 @@ begin
 
                 parity_out_reg <= (others => (others => '0'));
 
+                start_pos_next_half := 0;
+                index_row := 0;
+
+
+                start_pos_next_half_inv := 0;
+                index_row_inv := 0;
+
                 --
                 -- max_app_val or real app val + real shift 
                 --
-                cng_counter := 0;
                 sel_mux_output_app <= (others => (others => '0'));
                 shift <= (others => (others => '0'));
 
+                vector_addr := 0;
+                vector_addr_inv := 0;
 
+                cng_counter := 0;
+                cng_counter_inv := 0;
+
+                pchecks := (others => '0');
+
+                complete := false;
 
                 --
                 -- inside CNB                 
@@ -240,18 +253,14 @@ begin
                 --
                 -- resetting valid output
                 -- 
-                ok_checks := 0;
                 valid_output <= '0';
+                ok_checks := 0;
 
 
                 --
                 -- next state
                 --
-                if (first_matrix_calc = true) then
-                    nx_state <= MATRIX_CALC;
-                else
-                    nx_state <= FIRST;
-                end if;
+                nx_state <= MATRIX_CALC;
 
 
                 
@@ -294,7 +303,6 @@ begin
                     end if;
                 end loop;
 
-                first_matrix_calc := false;
 
                 nx_state <= FIRST;
 

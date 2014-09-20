@@ -4,6 +4,9 @@
 *.bak
 
 # modelsim related
+wlf*
 *.wlf
 *.ini
 work/
+transcript
+.nfs*
