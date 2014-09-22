@@ -52,24 +52,26 @@ end entity controller;
 architecture circuit of controller is
 
     -- signals used in FSM
-    type state is (START_RESET, MATRIX_CALC, FIRST, SECOND, THIRD, FOURTH, FINISH);
+    type state is (START, START_RESET, MATRIX_CALC, FIRST, SECOND, THIRD, FOURTH, FINISH);
     signal pr_state: state;
     signal nx_state: state;
     -- attribute enum_encoding: string;
     -- attribute enum_encoding of state: type is "sequential";
 
-    signal addr_length: std_logic := '0';
+    signal addr_length: std_logic;
 
 
     -- signals used for paritiy check matrix
     -- I'm choosing the biggest size of them and to address them I'm using the max check degree
-    signal matrix_addr: t_array64 := (others => 0);      
-    signal matrix_shift: t_array64 := (others => 0);
+    signal matrix_addr: t_array64;      
+    signal matrix_shift: t_array64;
     signal matrix_length: natural range 0 to 64;
-    signal matrix_rows: natural range 0 to 8:= 1;
+    signal matrix_rows: natural range 0 to 8;
     signal matrix_max_check_degree: natural range 0 to 16;
 
     signal parity_out_reg: t_parity_out_contr;
+    
+    signal code_rate_reg: t_code_rate;
     
 
     -- iterating signal
@@ -80,7 +82,7 @@ architecture circuit of controller is
     signal vector_addr_sig: natural := 0;
     signal start_pos_next_half_sig: natural := 0;
     signal ok_checks_sig: natural := 0;
-    signal pchecks_sig: std_logic_vector(SUBMAT_SIZE - 1 downto 0) := (others => '0');
+    signal pchecks_sig: std_logic_vector(SUBMAT_SIZE - 1 downto 0);
     
     
 begin
@@ -121,7 +123,7 @@ begin
     process (clk, rst)
     begin
         if (rst = '1') then
-            pr_state <= START_RESET;
+            pr_state <= START;
         elsif (clk'event and clk = '1') then
             pr_state <= nx_state;
         end if;
@@ -137,43 +139,45 @@ begin
     process (pr_state)
 
         -- base address of matrix (cng_counter * matrix_max_check_degree)
-        variable vector_addr: integer range 0 to 64 := 0;
-        variable vector_addr_inv: integer range 0 to 64 := 0;
+        variable vector_addr: integer range 0 to 64;
+        variable vector_addr_inv: integer range 0 to 64;
 
         -- row number in reduced matrix
-        variable cng_counter: integer range 0 to 8 := 0;
-        variable cng_counter_inv: integer range 0 to 8 := 0;
+        variable cng_counter: integer range 0 to 8;
+        variable cng_counter_inv: integer range 0 to 8;
 
         -- iteratons
-        variable iter_int: integer range 0 to 10 := 0;
+        variable iter_int: integer range 0 to 10; 
         
         -- msg rams
-        variable msg_row_rd: integer range 0 to 16 := 0;
-        variable msg_row_wr: integer range 0 to 16 := 0;
+        variable msg_row_rd: integer range 0 to 16;
+        variable msg_row_wr: integer range 0 to 16;
 
         -- parity checks
-        variable ok_checks: integer range 0 to MAX_CHV / 2:= 0;
-        variable pchecks: std_logic_vector(SUBMAT_SIZE - 1 downto 0) := (others => '0');
+        variable ok_checks: integer range 0 to MAX_CHV / 2;
+        variable pchecks: std_logic_vector(SUBMAT_SIZE - 1 downto 0);
 
         -- start pos
-        variable start_pos_next_half: integer range 0 to 64 := 0;
-        variable index_row: integer range 0 to 64 := 0;
+        variable start_pos_next_half: integer range 0 to 64;
+        variable index_row: integer range 0 to 64;
 
-        variable start_pos_next_half_inv: integer range 0 to 64 := 0;
-        variable index_row_inv: integer range 0 to 64 := 0;
+        variable start_pos_next_half_inv: integer range 0 to 64;
+        variable index_row_inv: integer range 0 to 64;
 
         -- finish iterating
-        variable next_iter_last_iter: boolean := false;
-        variable complete: boolean := false;
+        variable next_iter_last_iter: boolean;
+        variable complete: boolean;
 
         -- start iterating
-        variable first_time: boolean := true;
+        variable first_time: boolean;
+        variable first_time_on: boolean;
+        
 
         -- aux variables
-        variable val: integer range 0 to 1 := 0;
+        variable val: integer range 0 to 1;
 
-        variable ena_vc_first: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0) := (others => '0');
-        variable ena_vc_second: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0) := (others => '0');
+        variable ena_vc_first: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
+        variable ena_vc_second: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
         
         
     begin
@@ -181,9 +185,19 @@ begin
 
             
             --------------------------------------------------------------------------------------
+            -- zero state
+            --------------------------------------------------------------------------------------
+            when START =>
+
+
+                code_rate_reg <= code_rate;
+                first_time_on := true;
+
+                nx_state <= START_RESET;
+            
+            --------------------------------------------------------------------------------------
             -- first state 
             --------------------------------------------------------------------------------------
-
             when START_RESET =>
 
                 --
@@ -260,7 +274,13 @@ begin
                 --
                 -- next state
                 --
-                nx_state <= MATRIX_CALC;
+                if (code_rate = code_rate_reg and first_time_on = false) then
+                    nx_state <= FIRST;
+                else
+                    first_time_on := false;
+                    code_rate_reg <= code_rate;
+                    nx_state <= MATRIX_CALC;
+                end if;
 
 
                 
